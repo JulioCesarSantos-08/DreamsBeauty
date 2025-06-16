@@ -1,6 +1,6 @@
 // script.js
 import { database } from './firebase-config.js';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const productsContainer = document.getElementById('productsContainer');
 const categoryFilter = document.getElementById('categoryFilter');
@@ -8,21 +8,42 @@ const searchInput = document.getElementById('searchInput');
 
 let allProducts = [];
 
-function renderProducts(products) {
+function renderProductsGrouped(products) {
   productsContainer.innerHTML = "";
-  products.forEach(product => {
-    const card = document.createElement('div');
-    card.className = "product-card";
-    card.innerHTML = `
-      <img src="${product.imagen}" alt="${product.nombre}">
-      <h3>${product.nombre}</h3>
-      <p>${product.descripcion}</p>
-      <p><strong>Categoría:</strong> ${product.categoria}</p>
-      <p><strong>Precio:</strong> $${product.precio}</p>
-      <p><strong>Stock:</strong> ${product.existencia}</p>
-    `;
-    productsContainer.appendChild(card);
+
+  const grouped = {};
+  products.forEach(p => {
+    if (!grouped[p.categoria]) grouped[p.categoria] = [];
+    grouped[p.categoria].push(p);
   });
+
+  for (const categoria in grouped) {
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'category-group';
+
+    const title = document.createElement('h2');
+    title.textContent = categoria;
+    groupDiv.appendChild(title);
+
+    const slider = document.createElement('div');
+    slider.className = 'product-slider';
+
+    grouped[categoria].forEach(product => {
+      const card = document.createElement('div');
+      card.className = "product-card";
+      card.innerHTML = `
+        <img src="${product.imagen}" alt="${product.nombre}">
+        <h3>${product.nombre}</h3>
+        <p>${product.descripcion}</p>
+        <p><strong>Precio:</strong> $${product.precio}</p>
+        <p><strong>Stock:</strong> ${product.existencia}</p>
+      `;
+      slider.appendChild(card);
+    });
+
+    groupDiv.appendChild(slider);
+    productsContainer.appendChild(groupDiv);
+  }
 }
 
 function updateCategoryOptions() {
@@ -48,7 +69,7 @@ function filtrarProductos() {
     return coincideCategoria && coincideTexto;
   });
 
-  renderProducts(filtrados);
+  renderProductsGrouped(filtrados);
 }
 
 // Escuchar productos desde Firebase
