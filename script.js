@@ -1,41 +1,33 @@
-import { database } from "./firebase-config.js";
-import { get, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+// script.js
+import { database } from './firebase-config.js';
+import { ref, onValue } from 'firebase/database';
 
-const searchInput = document.getElementById("searchInput");
-const categoryFilter = document.getElementById("categoryFilter");
-const productContainer = document.getElementById("productContainer");
+const productsContainer = document.getElementById('productsContainer');
+const categoryFilter = document.getElementById('categoryFilter');
+const searchInput = document.getElementById('searchInput');
 
-let productos = [];
+let allProducts = [];
 
-onValue(ref(database, 'productos/'), snapshot => {
-  productos = [];
-  snapshot.forEach(child => {
-    productos.push({ id: child.key, ...child.val() });
-  });
-  renderProducts(productos);
-  loadCategories(productos);
-});
-
-function renderProducts(lista) {
-  productContainer.innerHTML = "";
-  lista.forEach(producto => {
-    const card = document.createElement("div");
+function renderProducts(products) {
+  productsContainer.innerHTML = "";
+  products.forEach(product => {
+    const card = document.createElement('div');
     card.className = "product-card";
     card.innerHTML = `
-      <img src="${producto.image}" alt="${producto.name}">
-      <h3>${producto.name}</h3>
-      <p>${producto.description}</p>
-      <strong>${producto.category}</strong><br>
-      <strong>$${producto.price}</strong><br>
-      <small>En stock: ${producto.stock}</small>
+      <img src="${product.imagen}" alt="${product.nombre}">
+      <h3>${product.nombre}</h3>
+      <p>${product.descripcion}</p>
+      <p><strong>Categoría:</strong> ${product.categoria}</p>
+      <p><strong>Precio:</strong> $${product.precio}</p>
+      <p><strong>Stock:</strong> ${product.existencia}</p>
     `;
-    productContainer.appendChild(card);
+    productsContainer.appendChild(card);
   });
 }
 
-function loadCategories(lista) {
-  const categorias = [...new Set(lista.map(p => p.category))];
-  categoryFilter.innerHTML = '<option value="todas">Todas las categorías</option>';
+function updateCategoryOptions() {
+  const categorias = Array.from(new Set(allProducts.map(p => p.categoria)));
+  categoryFilter.innerHTML = `<option value="todos">Todas las categorías</option>`;
   categorias.forEach(cat => {
     const option = document.createElement("option");
     option.value = cat;
@@ -44,19 +36,32 @@ function loadCategories(lista) {
   });
 }
 
-searchInput.addEventListener("input", e => {
-  const filtro = e.target.value.toLowerCase();
-  const filtrados = productos.filter(p =>
-    p.name.toLowerCase().includes(filtro) ||
-    p.description.toLowerCase().includes(filtro)
-  );
+function filtrarProductos() {
+  const busqueda = searchInput.value.toLowerCase();
+  const categoriaSeleccionada = categoryFilter.value;
+
+  const filtrados = allProducts.filter(producto => {
+    const coincideCategoria = categoriaSeleccionada === 'todos' || producto.categoria === categoriaSeleccionada;
+    const coincideTexto =
+      producto.nombre.toLowerCase().includes(busqueda) ||
+      producto.descripcion.toLowerCase().includes(busqueda);
+    return coincideCategoria && coincideTexto;
+  });
+
   renderProducts(filtrados);
+}
+
+// Escuchar productos desde Firebase
+onValue(ref(database, 'productos'), snapshot => {
+  const data = snapshot.val();
+  if (data) {
+    allProducts = Object.entries(data).map(([id, p]) => ({ id, ...p }));
+    updateCategoryOptions();
+    filtrarProductos();
+  } else {
+    productsContainer.innerHTML = "<p>No hay productos disponibles.</p>";
+  }
 });
 
-categoryFilter.addEventListener("change", e => {
-  const categoria = e.target.value;
-  const filtrados = categoria === "todas"
-    ? productos
-    : productos.filter(p => p.category === categoria);
-  renderProducts(filtrados);
-});
+searchInput.addEventListener("input", filtrarProductos);
+categoryFilter.addEventListener("change", filtrarProductos);

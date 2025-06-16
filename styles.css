@@ -1,16 +1,17 @@
 body {
-  font-family: sans-serif;
-  background: #fff0f5;
   margin: 0;
-  padding: 0;
+  font-family: 'Arial', sans-serif;
+  background: #fff0f5;
+  color: #333;
 }
 
 header {
-  background: #ffc0cb;
-  padding: 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 1rem;
+  background: #f8dfff;
+  flex-wrap: wrap;
 }
 
 .logo {
@@ -18,56 +19,101 @@ header {
 }
 
 #searchInput {
-  width: 60%;
   padding: 0.5rem;
+  border-radius: 8px;
+  border: none;
+  width: 200px;
+}
+
+#filters {
+  padding: 1rem;
+  background-color: #fcecff;
+}
+
+#categoryFilter {
+  padding: 0.5rem;
+  font-size: 1rem;
   border-radius: 10px;
   border: none;
+  background-color: #ffe6fa;
+  color: #555;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-left: 1rem;
 }
 
-.filters {
-  padding: 1rem;
-  text-align: center;
-}
-
-#productContainer {
+.products-slider {
   display: flex;
   overflow-x: auto;
   gap: 1rem;
   padding: 1rem;
+  scroll-snap-type: x mandatory;
 }
 
 .product-card {
-  min-width: 250px;
-  background: #fff;
-  border-radius: 12px;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  background-color: #ffeefc;
+  border-radius: 20px;
   padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 250px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-#adminBtn {
+.product-card img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.admin-floating-btn {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background: #f8c;
+  background: #f9b5e3;
   color: white;
   border: none;
   border-radius: 50%;
-  font-size: 2rem;
-  padding: 0.5rem;
+  font-size: 1.5rem;
+  padding: 0.8rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
   cursor: pointer;
+  z-index: 1000;
 }
 
-#adminPanel {
+/* 🌸 Estilo del formulario de administración */
+#adminForm {
   position: fixed;
-  top: 10%;
-  right: 10%;
+  bottom: 80px;
+  right: 20px;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  padding: 1rem;
-  max-width: 300px;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 1000;
+  width: 300px;
+  max-width: 90vw;
 }
 
-.hidden {
-  display: none;
+#adminForm input,
+#adminForm textarea,
+#adminForm button,
+#adminForm select {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+#adminForm button {
+  background-color: #ff99cc;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#adminForm button:hover {
+  background-color: #e788b6;
 }
