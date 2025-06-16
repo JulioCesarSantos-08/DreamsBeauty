@@ -1,12 +1,13 @@
 // script.js
 import { database } from './firebase-config.js';
-import { ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, onValue, update, push } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const productsContainer = document.getElementById('productsContainer');
 const categoryFilter = document.getElementById('categoryFilter');
 const searchInput = document.getElementById('searchInput');
 
 let allProducts = [];
+let carrito = []; // productos agregados al carrito
 
 function renderProductsGrouped(products) {
   productsContainer.innerHTML = "";
@@ -37,6 +38,8 @@ function renderProductsGrouped(products) {
         <p>${product.descripcion}</p>
         <p><strong>Precio:</strong> $${product.precio}</p>
         <p><strong>Stock:</strong> ${product.existencia}</p>
+        <button class="buy-btn" data-id="${product.id}">Comprar</button>
+        <button class="cart-btn" data-id="${product.id}">Agregar al carrito</button>
       `;
       slider.appendChild(card);
     });
@@ -44,6 +47,44 @@ function renderProductsGrouped(products) {
     groupDiv.appendChild(slider);
     productsContainer.appendChild(groupDiv);
   }
+
+  document.querySelectorAll('.buy-btn').forEach(btn => btn.addEventListener('click', handleCompra));
+  document.querySelectorAll('.cart-btn').forEach(btn => btn.addEventListener('click', handleCarrito));
+}
+
+function handleCompra(e) {
+  const id = e.target.dataset.id;
+  const producto = allProducts.find(p => p.id === id);
+  if (!producto || producto.existencia <= 0) return alert("Producto agotado");
+
+  const nombreCliente = prompt("¿Cuál es tu nombre para el comprobante?");
+  if (!nombreCliente) return;
+
+  const nuevaExistencia = producto.existencia - 1;
+  const productoRef = ref(database, `productos/${id}`);
+
+  update(productoRef, { existencia: nuevaExistencia });
+
+  const venta = {
+    productoId: id,
+    nombre: producto.nombre,
+    precio: producto.precio,
+    cliente: nombreCliente,
+    fecha: new Date().toISOString()
+  };
+  push(ref(database, 'ventas'), venta);
+
+  alert(`Gracias por tu compra, ${nombreCliente}. Guarda este mensaje como comprobante.`);
+}
+
+function handleCarrito(e) {
+  const id = e.target.dataset.id;
+  const producto = allProducts.find(p => p.id === id);
+  if (!producto) return;
+
+  carrito.push(producto);
+  alert(`Agregado al carrito: ${producto.nombre}`);
+  // En el futuro podemos mostrar el carrito visualmente y permitir confirmar compra múltiple
 }
 
 function updateCategoryOptions() {

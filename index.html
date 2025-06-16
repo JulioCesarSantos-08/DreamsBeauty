@@ -1,18 +1,39 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dreams Beauty MP</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="icon" href="Imagenes/logo1.png">
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="icon" href="imagenes/logo1.png"/>
+  <style>
+    .admin-floating-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #ffb6d5;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: background-color 0.3s;
+    }
+
+    .admin-floating-btn:hover {
+      background-color: #ff94c2;
+    }
+  </style>
 </head>
 <body>
   <!-- Encabezado de la tienda -->
   <header>
-    <img src="Imagenes/logo1.png" alt="Logo" class="logo">
+    <img src="imagenes/logo1.png" alt="Logo" class="logo" />
     <h1>Dreams Beauty MP</h1>
-    <input type="text" id="searchInput" placeholder="Buscar productos...">
+    <input type="text" id="searchInput" placeholder="Buscar productos..." />
   </header>
 
   <!-- Filtros -->
@@ -25,13 +46,13 @@
   <!-- Contenedor de productos -->
   <main id="productsContainer" class="products-slider"></main>
 
-  <!-- Botón flotante para administración -->
-  <button id="adminBtn" class="admin-floating-btn">🛠️</button>
+  <!-- Botón flotante de administración -->
+  <button class="admin-floating-btn" title="Administración" onclick="accessAdmin()">🛠️</button>
 
   <!-- Footer con redes sociales y ubicación -->
   <footer style="background-color: #ffe4f0; padding: 1.5rem; text-align: center; border-top: 2px solid #f9b5e3;">
     <p style="margin-bottom: 0.5rem; font-weight: bold; font-size: 1.1rem;">
-      Dreams Beauty MP &middot; Maquillaje &middot; Belleza Y Mas!
+      Dreams Beauty MP &middot; Maquillaje &middot; Belleza Y Más!
     </p>
     <div style="margin-top: 0.5rem;">
       <a href="https://www.instagram.com/dreams.beauty.mp?igsh=aGlzNDU4ZXNrNGxz" target="_blank" style="margin: 0 10px;">
@@ -49,8 +70,17 @@
     </div>
   </footer>
 
-  <!-- Scripts -->
+  <!-- Script de cliente -->
   <script type="module" src="script.js"></script>
-  <script type="module" src="admin.js"></script>
+  <script>
+    function accessAdmin() {
+      const password = prompt("Introduce la contraseña de administrador:");
+      if (password === "milip2025") {
+        window.location.href = "admin.html";
+      } else if (password !== null) {
+        alert("Contraseña incorrecta.");
+      }
+    }
+  </script>
 </body>
 </html>

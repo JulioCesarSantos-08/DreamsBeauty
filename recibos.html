@@ -1,0 +1,143 @@
+<!-- recibos.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recibos - Dreams Beauty MP</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fff0f5;
+      padding: 1rem;
+    }
+    h1 {
+      text-align: center;
+      color: #c2185b;
+    }
+    .pedido {
+      background: #fff;
+      border: 1px solid #f8bbd0;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .pedido-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pedido-productos {
+      margin-top: 0.5rem;
+      padding-left: 1rem;
+    }
+    button {
+      background-color: #f48fb1;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .floating-btns {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .floating-btns a {
+      background-color: #f06292;
+      color: white;
+      padding: 10px;
+      border-radius: 50px;
+      text-decoration: none;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>Recibos / Pedidos en Espera</h1>
+  <div id="listaPedidos"></div>
+
+  <div class="floating-btns">
+    <a href="admin.html">🛠️ Admin</a>
+    <a href="index.html">🏠 Principal</a>
+  </div>
+
+  <script type="module">
+    import { database } from './firebase-config.js';
+    import {
+      ref,
+      onValue,
+      remove,
+      update,
+      get,
+      child
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+    const lista = document.getElementById('listaPedidos');
+    const pedidosRef = ref(database, 'pedidos');
+    const productosRef = ref(database, 'productos');
+
+    onValue(pedidosRef, async (snapshot) => {
+      lista.innerHTML = '';
+      const pedidos = snapshot.val();
+
+      if (!pedidos) {
+        lista.innerHTML = '<p>No hay pedidos actualmente.</p>';
+        return;
+      }
+
+      for (const [id, pedido] of Object.entries(pedidos)) {
+        const div = document.createElement('div');
+        div.className = 'pedido';
+        div.innerHTML = `
+          <div class="pedido-header">
+            <div><strong>Cliente:</strong> ${pedido.cliente}</div>
+            <button data-id="${id}" class="cancelar">Cancelar</button>
+          </div>
+          <div><strong>Fecha:</strong> ${pedido.fecha || 'Sin fecha'}</div>
+          <div class="pedido-productos">
+            <strong>Productos:</strong>
+            <ul>
+              ${pedido.productos.map(p => `
+                <li>${p.nombre} - Cantidad: ${p.cantidad}</li>
+              `).join('')}
+            </ul>
+          </div>
+        `;
+        lista.appendChild(div);
+      }
+
+      document.querySelectorAll('.cancelar').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          if (confirm('¿Cancelar este pedido? Esto restaurará las existencias.')) {
+            const pedidoSnap = await get(child(pedidosRef, id));
+            const pedido = pedidoSnap.val();
+
+            if (pedido?.productos) {
+              for (const producto of pedido.productos) {
+                const prodSnap = await get(child(productosRef, producto.id));
+                if (prodSnap.exists()) {
+                  const actual = prodSnap.val();
+                  const nuevaExistencia = (actual.existencia || 0) + producto.cantidad;
+                  await update(child(productosRef, producto.id), { existencia: nuevaExistencia });
+                }
+              }
+            }
+
+            await remove(child(pedidosRef, id));
+            alert('Pedido cancelado y existencias restauradas.');
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
