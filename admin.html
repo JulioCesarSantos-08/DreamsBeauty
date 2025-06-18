@@ -137,6 +137,60 @@
 
   <!-- Script principal de administración -->
   <script type="module" src="admin.js"></script>
+  <script>
+  document.getElementById("guardarBtn").addEventListener("click", async () => {
+    const nombre = document.getElementById("nombre").value.trim();
+    const descripcion = document.getElementById("descripcion").value.trim();
+    const categoria = document.getElementById("categoria").value.trim();
+    const precio = parseFloat(document.getElementById("precio").value);
+    const existencia = parseInt(document.getElementById("existencia").value);
+    const imagenInput = document.getElementById("imagen");
+
+    if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia) || !imagenInput.files.length) {
+      alert("Por favor completa todos los campos.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('imagen', imagenInput.files[0]);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!data.url) throw new Error("No se recibió URL");
+
+      const producto = {
+        nombre,
+        descripcion,
+        categoria,
+        precio,
+        existencia,
+        imagen: data.url // 👈 Usamos la URL de Vercel Blob
+      };
+
+      // Guardar en Firebase
+      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js').then(({ getDatabase, ref, push, set }) => {
+        const db = getDatabase();
+        const productosRef = ref(db, 'productos');
+        const nuevoProductoRef = push(productosRef);
+        set(nuevoProductoRef, producto).then(() => {
+          alert("Producto guardado con éxito.");
+          document.getElementById("formularioProducto").reset();
+          document.getElementById("formularioProducto").style.display = "none";
+        });
+      });
+
+    } catch (error) {
+      console.error("Error al subir imagen o guardar producto:", error);
+      alert("Ocurrió un error. Verifica que la imagen no sea muy pesada.");
+    }
+  });
+</script>
 
   <script>
     const menuBtn = document.getElementById('menuBtn');

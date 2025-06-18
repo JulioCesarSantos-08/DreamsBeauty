@@ -1,33 +1,50 @@
-// Importa las funciones necesarias del SDK de Firebase 
+// admin.js
+import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { firebaseConfig } from './firebase-config.js';
 
-// Configuración del proyecto Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyDu-_vpONpb42CSkPzjWwLZLlWkG0LLyXM",
-  authDomain: "tiendabelleza-56ce2.firebaseapp.com",
-  databaseURL: "https://tiendabelleza-56ce2-default-rtdb.firebaseio.com",
-  projectId: "tiendabelleza-56ce2",
-  storageBucket: "tiendabelleza-56ce2.appspot.com",
-  messagingSenderId: "78777047836",
-  appId: "1:78777047836:web:d08fea0926fe55c10a38d9"
-};
-
-// Inicializa Firebase
+// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Función opcional para actualizar un producto
-function actualizarProducto(productoId, datosActualizados) {
-  const referencia = ref(database, 'productos/' + productoId);
-  update(referencia, datosActualizados)
+// Evento al dar clic en "Guardar producto"
+document.getElementById("guardarBtn").addEventListener("click", () => {
+  const nombre = document.getElementById("nombre").value.trim();
+  const descripcion = document.getElementById("descripcion").value.trim();
+  const categoria = document.getElementById("categoria").value.trim();
+  const precio = parseFloat(document.getElementById("precio").value);
+  const existencia = parseInt(document.getElementById("existencia").value);
+  const imagenInput = document.getElementById("imagen");
+
+  if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia) || !imagenInput.value) {
+    alert("Por favor completa todos los campos.");
+    return;
+  }
+
+  // Solo tomamos el nombre del archivo para guardar la ruta local
+  const nombreImagen = imagenInput.value.split("\\").pop();
+  const urlImagen = 'productos/' + nombreImagen;
+
+  // Crear nueva referencia en la base de datos
+  const productosRef = ref(database, 'productos');
+  const nuevoProductoRef = push(productosRef);
+
+  // Guardar producto
+  set(nuevoProductoRef, {
+    nombre,
+    descripcion,
+    categoria,
+    precio,
+    existencia,
+    imagen: urlImagen
+  })
     .then(() => {
-      console.log("Datos actualizados correctamente.");
+      alert("Producto guardado con éxito.");
+      document.getElementById("formularioProducto").reset();
+      document.getElementById("formularioProducto").style.display = "none";
     })
     .catch((error) => {
-      console.error("Error al actualizar los datos:", error);
+      console.error("Error al guardar el producto:", error);
+      alert("Hubo un error al guardar el producto.");
     });
-}
-
-// Exporta la base de datos y la función de actualización
-export { database, actualizarProducto };
+});
