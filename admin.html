@@ -19,6 +19,40 @@
       margin-top: 1rem;
     }
 
+    #formularioProducto {
+      max-width: 500px;
+      margin: 1rem auto;
+      background-color: #ffe4ec;
+      padding: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      display: none;
+    }
+
+    #formularioProducto input,
+    #formularioProducto textarea,
+    #formularioProducto select {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    #formularioProducto button {
+      background-color: #f06292;
+      color: white;
+      border: none;
+      padding: 10px;
+      width: 100%;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #formularioProducto button:hover {
+      background-color: #ec407a;
+    }
+
     #adminContainer {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -75,6 +109,18 @@
 
   <h1>Panel de Administración</h1>
 
+  <!-- Formulario de nuevo producto -->
+  <div id="formularioProducto">
+    <input type="text" id="nombre" placeholder="Nombre del producto" required>
+    <textarea id="descripcion" placeholder="Descripción del producto" rows="3"></textarea>
+    <input type="text" id="categoria" placeholder="Categoría">
+    <input type="number" id="precio" placeholder="Precio" step="0.01" required>
+    <input type="number" id="existencia" placeholder="Existencia" required>
+    <input type="file" id="imagen" accept="image/*" required>
+    <button id="guardarBtn">Guardar producto</button>
+  </div>
+
+  <!-- Contenedor de productos -->
   <div id="adminContainer">
     <!-- Aquí se cargarán los productos con opciones para editar/eliminar -->
   </div>
@@ -99,6 +145,11 @@
     menuBtn.addEventListener('click', () => {
       adminMenu.style.display = adminMenu.style.display === 'none' ? 'flex' : 'none';
     });
+
+    window.mostrarFormulario = function () {
+      const form = document.getElementById('formularioProducto');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    };
   </script>
 
 </body>

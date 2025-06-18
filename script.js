@@ -1,13 +1,18 @@
 // script.js
 import { database } from './firebase-config.js';
-import { ref, onValue, update, push } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import {
+  ref,
+  onValue,
+  update,
+  push
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const productsContainer = document.getElementById('productsContainer');
 const categoryFilter = document.getElementById('categoryFilter');
 const searchInput = document.getElementById('searchInput');
 
 let allProducts = [];
-let carrito = []; // productos agregados al carrito
+let carrito = [];
 
 function renderProductsGrouped(products) {
   productsContainer.innerHTML = "";

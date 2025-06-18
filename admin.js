@@ -1,32 +1,7 @@
-// admin.js
-import { database, storage } from './firebase-config.js';
+import { database } from './firebase-config.js';
 import {
   ref as dbRef, push, set, update, remove, onValue
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import {
-  ref as storageRef, uploadBytes, getDownloadURL
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
-
-const adminBtn = document.getElementById('adminBtn');
-let isAdmin = false;
-
-adminBtn.addEventListener('click', () => {
-  if (!isAdmin) {
-    const pass = prompt('Introduce la contraseña de administrador:');
-    if (pass === 'milip2025') {
-      isAdmin = true;
-      mostrarFormulario();
-      mostrarPanelProductos();
-      mostrarBotonesNavegacion();
-    } else {
-      alert('Contraseña incorrecta.');
-    }
-  } else {
-    mostrarFormulario();
-    mostrarPanelProductos();
-    mostrarBotonesNavegacion();
-  }
-});
 
 function mostrarFormulario(producto = null) {
   const existing = document.getElementById('adminForm');
@@ -55,7 +30,7 @@ function mostrarFormulario(producto = null) {
     <input type="text" id="categoria" placeholder="Categoría" required style="width: 100%; margin-bottom: 10px;" value="${producto?.categoria || ''}"><br>
     <input type="number" id="precio" placeholder="Precio" required style="width: 100%; margin-bottom: 10px;" value="${producto?.precio || ''}"><br>
     <input type="number" id="existencia" placeholder="Existencia" required style="width: 100%; margin-bottom: 10px;" value="${producto?.existencia || ''}"><br>
-    <input type="file" id="imagen" accept="image/*" style="margin-bottom: 20px;"><br>
+    <input type="text" id="imagenURL" placeholder="URL de la imagen" required style="width: 100%; margin-bottom: 20px;" value="${producto?.imagen || ''}"><br>
 
     <div style="text-align: center;">
       <button type="submit" style="background-color: #f48fb1; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; margin-right: 10px;">
@@ -69,9 +44,7 @@ function mostrarFormulario(producto = null) {
 
   document.body.appendChild(form);
 
-  document.getElementById('cerrarForm').addEventListener('click', () => {
-    form.remove();
-  });
+  document.getElementById('cerrarForm').addEventListener('click', () => form.remove());
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -81,23 +54,15 @@ function mostrarFormulario(producto = null) {
     const categoria = document.getElementById('categoria').value.trim().toLowerCase();
     const precio = parseFloat(document.getElementById('precio').value);
     const existencia = parseInt(document.getElementById('existencia').value);
-    const imagenFile = document.getElementById('imagen').files[0];
+    const imagenURL = document.getElementById('imagenURL').value.trim();
 
-    if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia)) {
+    if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia) || !imagenURL) {
       alert('Por favor completa todos los campos.');
       return;
     }
 
     try {
-      let imageURL = producto?.imagen;
-
-      if (imagenFile) {
-        const imageRef = storageRef(storage, 'imagenes/' + Date.now() + '_' + imagenFile.name);
-        await uploadBytes(imageRef, imagenFile);
-        imageURL = await getDownloadURL(imageRef);
-      }
-
-      const productoData = { nombre, descripcion, categoria, precio, existencia, imagen: imageURL };
+      const productoData = { nombre, descripcion, categoria, precio, existencia, imagen: imagenURL };
 
       if (producto) {
         await update(dbRef(database, 'productos/' + producto.id), productoData);
@@ -119,89 +84,133 @@ function mostrarFormulario(producto = null) {
 }
 
 function mostrarPanelProductos() {
-  let panel = document.getElementById('productosPanel');
-  if (panel) panel.remove();
+  let panel = document.getElementById('adminPanel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'adminPanel';
+    panel.style = `
+      position: fixed;
+      top: 75px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 800px;
+      background: #fffafc;
+      border: 2px solid #f9b5e3;
+      border-radius: 15px;
+      padding: 20px;
+      z-index: 9998;
+      max-height: 70vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    `;
+    document.body.appendChild(panel);
+  }
 
-  panel = document.createElement('div');
-  panel.id = 'productosPanel';
-  panel.style = `
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    max-height: 40vh;
-    overflow-y: auto;
-    background: #fff;
-    border-top: 2px solid #f9b5e3;
-    padding: 1rem;
-    z-index: 9998;
-  `;
+  const productosRef = dbRef(database, 'productos');
+  onValue(productosRef, (snapshot) => {
+    panel.innerHTML = `<h2 style="text-align:center;">Lista de Productos</h2>`;
+    snapshot.forEach((child) => {
+      const producto = child.val();
+      producto.id = child.key;
 
-  panel.innerHTML = `<h3>Productos Existentes</h3><div id="listaProductos"></div>`;
-  document.body.appendChild(panel);
+      const card = document.createElement('div');
+      card.className = 'productoCard';
+      card.dataset.id = producto.id;
+      card.style = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 5px;
+        gap: 1rem;
+      `;
 
-  const lista = panel.querySelector('#listaProductos');
-
-  onValue(dbRef(database, 'productos'), snapshot => {
-    const data = snapshot.val();
-    lista.innerHTML = '';
-    if (data) {
-      Object.entries(data).forEach(([id, producto]) => {
-        const div = document.createElement('div');
-        div.style = "display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; padding: 5px 0;";
-        div.innerHTML = `
-          <span><strong>${producto.nombre}</strong> (${producto.categoria}) - $${producto.precio} - Stock: ${producto.existencia}</span>
-          <span>
-            <button style="margin-right: 10px;" data-id="${id}" class="editarBtn">✏️</button>
-            <button data-id="${id}" class="eliminarBtn">🗑️</button>
-          </span>
-        `;
-        lista.appendChild(div);
-      });
-
-      lista.querySelectorAll('.editarBtn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.dataset.id;
-          mostrarFormulario({ id, ...data[id] });
-        });
-      });
-
-      lista.querySelectorAll('.eliminarBtn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.id;
-          if (confirm('¿Estás seguro de eliminar este producto?')) {
-            await remove(dbRef(database, 'productos/' + id));
-            alert('Producto eliminado');
-            mostrarPanelProductos();
-          }
-        });
-      });
-    } else {
-      lista.innerHTML = '<p>No hay productos aún.</p>';
-    }
+      card.innerHTML = `
+        <div style="flex: 1;">
+          <strong>${producto.nombre}</strong><br>
+          <small>${producto.descripcion}</small><br>
+          <small><b>Categoría:</b> ${producto.categoria}</small><br>
+          <small><b>Precio:</b> $${producto.precio}</small> |
+          <small><b>Existencia:</b> ${producto.existencia}</small>
+        </div>
+        <img src="${producto.imagen}" alt="imagen" style="height: 50px; border-radius: 5px;">
+        <div style="display:flex; flex-direction: column; gap: 5px;">
+          <button class="editarBtn" style="padding: 5px 10px; background: #ffd54f; border: none; border-radius: 5px;">Editar</button>
+          <button class="eliminarBtn" style="padding: 5px 10px; background: #e57373; color: white; border: none; border-radius: 5px;">Eliminar</button>
+        </div>
+      `;
+      panel.appendChild(card);
+    });
   });
 }
 
 function mostrarBotonesNavegacion() {
-  let btns = document.getElementById('botonesAdmin');
-  if (btns) return;
-
-  btns = document.createElement('div');
-  btns.id = 'botonesAdmin';
-  btns.style = `
-    position: fixed;
-    bottom: 70px;
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 9999;
-  `;
-
-  btns.innerHTML = `
-    <button onclick="window.location.href='recibos.html'" style="background:#ce93d8;color:white;padding:10px 15px;border:none;border-radius:10px;cursor:pointer;">🧾 Ver Recibos</button>
-    <button onclick="window.location.href='index.html'" style="background:#f48fb1;color:white;padding:10px 15px;border:none;border-radius:10px;cursor:pointer;">🏠 Página Principal</button>
-  `;
-
-  document.body.appendChild(btns);
+  const btnNuevo = document.getElementById('nuevoProductoBtn');
+  if (!btnNuevo) {
+    const boton = document.createElement('button');
+    boton.id = 'nuevoProductoBtn';
+    boton.textContent = 'Agregar Nuevo Producto';
+    boton.style = `
+      position: fixed;
+      bottom: 100px;
+      right: 30px;
+      background: #f06292;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      z-index: 9999;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+    `;
+    boton.addEventListener('click', () => mostrarFormulario());
+    document.body.appendChild(boton);
+  }
 }
+
+const adminBtn = document.getElementById('adminBtn');
+let isAdmin = false;
+
+adminBtn.addEventListener('click', () => {
+  if (!isAdmin) {
+    const pass = prompt('Introduce la contraseña de administrador:');
+    if (pass === 'milip2025') {
+      isAdmin = true;
+      mostrarFormulario();
+      mostrarPanelProductos();
+      mostrarBotonesNavegacion();
+    } else {
+      alert('Contraseña incorrecta.');
+    }
+  } else {
+    mostrarFormulario();
+    mostrarPanelProductos();
+    mostrarBotonesNavegacion();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('editarBtn')) {
+    const id = e.target.closest('.productoCard').dataset.id;
+    const productoRef = dbRef(database, 'productos/' + id);
+    onValue(productoRef, (snapshot) => {
+      const producto = snapshot.val();
+      if (producto) {
+        producto.id = id;
+        mostrarFormulario(producto);
+      }
+    }, { onlyOnce: true });
+  }
+
+  if (e.target.classList.contains('eliminarBtn')) {
+    const id = e.target.closest('.productoCard').dataset.id;
+    if (confirm('¿Estás seguro de eliminar este producto?')) {
+      remove(dbRef(database, 'productos/' + id))
+        .then(() => alert('Producto eliminado.'))
+        .catch((error) => alert('Error al eliminar: ' + error));
+    }
+  }
+});
