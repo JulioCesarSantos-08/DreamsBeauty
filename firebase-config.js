@@ -1,4 +1,3 @@
-// admin.js
 import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { firebaseConfig } from './firebase-config.js';
@@ -38,13 +37,13 @@ document.getElementById("guardarBtn").addEventListener("click", () => {
     existencia,
     imagen: urlImagen
   })
-    .then(() => {
-      alert("Producto guardado con éxito.");
-      document.getElementById("formularioProducto").reset();
-      document.getElementById("formularioProducto").style.display = "none";
-    })
-    .catch((error) => {
-      console.error("Error al guardar el producto:", error);
-      alert("Hubo un error al guardar el producto.");
-    });
+  .then(() => {
+    alert("Producto guardado con éxito.");
+    document.getElementById("formularioProducto").reset();
+    document.getElementById("formularioProducto").style.display = "none";
+  })
+  .catch((error) => {
+    console.error("Error al guardar el producto:", error);
+    alert("Hubo un error al guardar el producto.");
+  });
 });

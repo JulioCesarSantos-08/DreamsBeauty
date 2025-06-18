@@ -5,31 +5,42 @@ import fs from 'fs';
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Importante para manejar archivos con formidable
   },
 };
 
 export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: `Método ${req.method} no permitido` });
+  }
+
   const form = formidable({ multiples: false });
 
   form.parse(req, async (err, fields, files) => {
     if (err) {
-      res.status(500).json({ error: 'Error al leer el formulario' });
-      return;
+      console.error('Error al parsear formulario:', err);
+      return res.status(500).json({ error: 'Error al leer el formulario' });
     }
 
     const file = files.imagen;
     if (!file) {
-      res.status(400).json({ error: 'No se envió ningún archivo' });
-      return;
+      return res.status(400).json({ error: 'No se envió ningún archivo' });
     }
 
-    const { filepath, originalFilename } = file;
-    const fileStream = fs.createReadStream(filepath);
-    const blob = await put(`productos/${originalFilename}`, fileStream, {
-      access: 'public',
-    });
+    try {
+      const { filepath, originalFilename } = file;
+      const fileStream = fs.createReadStream(filepath);
 
-    res.status(200).json({ url: blob.url });
+      // Subir el archivo a Vercel Blob Storage con acceso público
+      const blob = await put(`productos/${originalFilename}`, fileStream, {
+        access: 'public',
+      });
+
+      return res.status(200).json({ url: blob.url });
+    } catch (error) {
+      console.error('Error al subir a Vercel Blob:', error);
+      return res.status(500).json({ error: 'Error al subir archivo' });
+    }
   });
 }
