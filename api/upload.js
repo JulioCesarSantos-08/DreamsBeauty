@@ -5,7 +5,7 @@ import fs from 'fs';
 
 export const config = {
   api: {
-    bodyParser: false, // Importante para manejar archivos con formidable
+    bodyParser: false,
   },
 };
 
@@ -32,9 +32,10 @@ export default async function handler(req, res) {
       const { filepath, originalFilename } = file;
       const fileStream = fs.createReadStream(filepath);
 
-      // Subir el archivo a Vercel Blob Storage con acceso público
+      // Usamos el token de entorno
       const blob = await put(`productos/${originalFilename}`, fileStream, {
         access: 'public',
+        token: process.env.BLOB_READ_WRITE_TOKEN,
       });
 
       return res.status(200).json({ url: blob.url });
