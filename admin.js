@@ -9,6 +9,7 @@ function mostrarFormulario(producto = null) {
 
   const form = document.createElement('form');
   form.id = 'adminForm';
+  form.enctype = 'multipart/form-data';
   form.style = `
     position: fixed;
     top: 10%;
@@ -30,7 +31,9 @@ function mostrarFormulario(producto = null) {
     <input type="text" id="categoria" placeholder="Categoría" required style="width: 100%; margin-bottom: 10px;" value="${producto?.categoria || ''}"><br>
     <input type="number" id="precio" placeholder="Precio" required style="width: 100%; margin-bottom: 10px;" value="${producto?.precio || ''}"><br>
     <input type="number" id="existencia" placeholder="Existencia" required style="width: 100%; margin-bottom: 10px;" value="${producto?.existencia || ''}"><br>
-    <input type="text" id="imagenURL" placeholder="URL de la imagen" required style="width: 100%; margin-bottom: 20px;" value="${producto?.imagen || ''}"><br>
+    
+    <input type="file" id="imagenInput" accept="image/*" ${producto ? '' : 'required'} style="margin-bottom: 10px;"><br>
+    <input type="hidden" id="imagenURL" value="${producto?.imagen || ''}">
 
     <div style="text-align: center;">
       <button type="submit" style="background-color: #f48fb1; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; margin-right: 10px;">
@@ -46,6 +49,32 @@ function mostrarFormulario(producto = null) {
 
   document.getElementById('cerrarForm').addEventListener('click', () => form.remove());
 
+  const imagenInput = document.getElementById('imagenInput');
+  const imagenURL = document.getElementById('imagenURL');
+
+  imagenInput.addEventListener('change', async () => {
+    const file = imagenInput.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('imagen', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('Error en la subida de imagen');
+
+      const data = await res.json();
+      imagenURL.value = data.url;
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      alert('Hubo un problema al subir la imagen.');
+    }
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -54,30 +83,30 @@ function mostrarFormulario(producto = null) {
     const categoria = document.getElementById('categoria').value.trim().toLowerCase();
     const precio = parseFloat(document.getElementById('precio').value);
     const existencia = parseInt(document.getElementById('existencia').value);
-    const imagenURL = document.getElementById('imagenURL').value.trim();
+    const url = imagenURL.value.trim();
 
-    if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia) || !imagenURL) {
-      alert('Por favor completa todos los campos.');
+    if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia) || !url) {
+      alert('Por favor completa todos los campos y espera a que la imagen termine de subir.');
       return;
     }
 
-    try {
-      const productoData = { nombre, descripcion, categoria, precio, existencia, imagen: imagenURL };
+    const productoData = { nombre, descripcion, categoria, precio, existencia, imagen: url };
 
+    try {
       if (producto) {
         await update(dbRef(database, 'productos/' + producto.id), productoData);
         alert('Producto actualizado exitosamente');
       } else {
-        const newProductRef = push(dbRef(database, 'productos'));
-        await set(newProductRef, productoData);
+        const newRef = push(dbRef(database, 'productos'));
+        await set(newRef, productoData);
         alert('Producto agregado exitosamente');
       }
 
       form.reset();
       form.remove();
       mostrarPanelProductos();
-    } catch (error) {
-      console.error('Error al guardar producto:', error);
+    } catch (err) {
+      console.error('Error al guardar producto:', err);
       alert('Hubo un error al guardar el producto.');
     }
   });
