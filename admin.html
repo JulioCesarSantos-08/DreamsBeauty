@@ -27,8 +27,7 @@
       display: none;
     }
     #formularioProducto input,
-    #formularioProducto textarea,
-    #formularioProducto select {
+    #formularioProducto textarea {
       width: 100%;
       margin-bottom: 10px;
       padding: 8px;
@@ -52,6 +51,35 @@
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 1rem;
       padding: 1rem 2rem;
+    }
+    .producto-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .producto-card img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .producto-card button {
+      margin: 5px 0;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-editar {
+      background-color: #f8bbd0;
+      color: #4a148c;
+    }
+    .btn-eliminar {
+      background-color: #ef5350;
+      color: white;
     }
     .boton-flotante {
       position: fixed;
@@ -98,39 +126,37 @@
 <body>
   <h1>Panel de Administración</h1>
 
-  <!-- Formulario de nuevo producto -->
+  <!-- Formulario de nuevo producto / editar producto -->
   <div id="formularioProducto">
+    <input type="hidden" id="productoId" />
     <input type="text" id="nombre" placeholder="Nombre del producto" required />
     <textarea id="descripcion" placeholder="Descripción del producto" rows="3"></textarea>
     <input type="text" id="categoria" placeholder="Categoría" />
     <input type="number" id="precio" placeholder="Precio" step="0.01" required />
     <input type="number" id="existencia" placeholder="Existencia" required />
-    <input type="file" id="imagen" accept="image/*" required />
+    <input type="file" id="imagen" accept="image/*" />
     <button id="guardarBtn">Guardar producto</button>
   </div>
 
   <!-- Contenedor de productos -->
-  <div id="adminContainer">
-    <!-- Aquí se cargarán los productos con opciones para editar/eliminar -->
-  </div>
+  <div id="adminContainer"></div>
 
-  <!-- Botón flotante principal -->
-  <button class="boton-flotante" id="menuBtn" title="Menú de opciones">☰</button>
+  <!-- Botón flotante -->
+  <button class="boton-flotante" id="menuBtn">☰</button>
 
-  <!-- Menú flotante con opciones -->
+  <!-- Menú admin -->
   <div class="menu-admin" id="adminMenu" style="display: none;">
     <button onclick="window.location.href='recibos.html'">Ver pedidos</button>
     <button onclick="window.location.href='index.html'">Volver a la tienda</button>
     <button onclick="mostrarFormulario()">+ Producto</button>
   </div>
 
-  <!-- Script principal -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-    const firebaseConfig = {
+    const app = initializeApp({
       apiKey: "AIzaSyDBJ9qe5eZqptNy1UTb4Oi1mcJUxBxKf-s",
       authDomain: "dreamshop-45a70.firebaseapp.com",
       databaseURL: "https://dreamshop-45a70-default-rtdb.firebaseio.com",
@@ -139,11 +165,11 @@
       messagingSenderId: "183753341240",
       appId: "1:183753341240:web:5870409b9f704d1e42a9cd",
       measurementId: "G-XBYP89FPFL"
-    };
+    });
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+    const db = getDatabase(app);
     const storage = getStorage(app);
+    const productosRef = ref(db, 'productos');
 
     const menuBtn = document.getElementById('menuBtn');
     const adminMenu = document.getElementById('adminMenu');
@@ -151,12 +177,24 @@
       adminMenu.style.display = adminMenu.style.display === 'none' ? 'flex' : 'none';
     });
 
-    window.mostrarFormulario = function () {
+    window.mostrarFormulario = function (producto = null, id = null) {
       const form = document.getElementById('formularioProducto');
-      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      form.style.display = 'block';
+      if (producto) {
+        document.getElementById('productoId').value = id;
+        document.getElementById('nombre').value = producto.nombre;
+        document.getElementById('descripcion').value = producto.descripcion;
+        document.getElementById('categoria').value = producto.categoria;
+        document.getElementById('precio').value = producto.precio;
+        document.getElementById('existencia').value = producto.existencia;
+      } else {
+        form.reset();
+        document.getElementById('productoId').value = '';
+      }
     };
 
     document.getElementById("guardarBtn").addEventListener("click", async () => {
+      const id = document.getElementById('productoId').value;
       const nombre = document.getElementById("nombre").value.trim();
       const descripcion = document.getElementById("descripcion").value.trim();
       const categoria = document.getElementById("categoria").value.trim();
@@ -164,34 +202,70 @@
       const existencia = parseInt(document.getElementById("existencia").value);
       const imagenInput = document.getElementById("imagen");
 
-      if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia) || !imagenInput.files.length) {
+      if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia)) {
         alert("Por favor completa todos los campos.");
         return;
       }
 
-      const imagenArchivo = imagenInput.files[0];
-      const ruta = `productos/${Date.now()}_${imagenArchivo.name}`;
-      const imagenRef = storageRef(storage, ruta);
-
       try {
-        // Subir imagen a Firebase Storage
-        await uploadBytes(imagenRef, imagenArchivo);
-        const imagenURL = await getDownloadURL(imagenRef);
+        let imagenURL = null;
+        if (imagenInput.files.length) {
+          const archivo = imagenInput.files[0];
+          const ruta = `productos/${Date.now()}_${archivo.name}`;
+          const imgRef = storageRef(storage, ruta);
+          await uploadBytes(imgRef, archivo);
+          imagenURL = await getDownloadURL(imgRef);
+        }
 
-        // Guardar producto en Realtime Database
-        const producto = { nombre, descripcion, categoria, precio, existencia, imagen: imagenURL };
-        const productosRef = ref(database, 'productos');
-        const nuevoProductoRef = push(productosRef);
-        await set(nuevoProductoRef, producto);
+        const producto = { nombre, descripcion, categoria, precio, existencia };
+        if (imagenURL) producto.imagen = imagenURL;
 
-        alert("Producto guardado con éxito.");
+        if (id) {
+          await update(ref(db, `productos/${id}`), producto);
+        } else {
+          const nuevoRef = push(productosRef);
+          producto.imagen = imagenURL;
+          await set(nuevoRef, producto);
+        }
+
+        alert("Producto guardado.");
         document.getElementById("formularioProducto").reset();
         document.getElementById("formularioProducto").style.display = "none";
       } catch (error) {
-        console.error("Error al guardar el producto:", error);
-        alert("Ocurrió un error al subir la imagen o guardar el producto.");
+        console.error("Error al guardar producto:", error);
+        alert("Hubo un error al guardar.");
       }
     });
+
+    function cargarProductos() {
+      onValue(productosRef, (snapshot) => {
+        const contenedor = document.getElementById("adminContainer");
+        contenedor.innerHTML = "";
+        snapshot.forEach((child) => {
+          const producto = child.val();
+          const id = child.key;
+          const div = document.createElement("div");
+          div.className = "producto-card";
+          div.innerHTML = `
+            <img src="${producto.imagen || 'imagenes/logo1.png'}" alt="${producto.nombre}" />
+            <h3>${producto.nombre}</h3>
+            <p><strong>Precio:</strong> $${producto.precio}</p>
+            <p><strong>Existencia:</strong> ${producto.existencia}</p>
+            <button class="btn-editar">Editar</button>
+            <button class="btn-eliminar">Eliminar</button>
+          `;
+          div.querySelector(".btn-editar").onclick = () => mostrarFormulario(producto, id);
+          div.querySelector(".btn-eliminar").onclick = async () => {
+            if (confirm("¿Eliminar este producto?")) {
+              await remove(ref(db, `productos/${id}`));
+            }
+          };
+          contenedor.appendChild(div);
+        });
+      });
+    }
+
+    cargarProductos();
   </script>
 </body>
 </html>

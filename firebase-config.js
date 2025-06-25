@@ -1,6 +1,7 @@
 // firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -17,9 +18,10 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
+const storage = getStorage(app);
 
 // Función para guardar producto desde el formulario
-export function guardarProductoDesdeFormulario() {
+export async function guardarProductoDesdeFormulario() {
   const nombre = document.getElementById("nombre").value.trim();
   const descripcion = document.getElementById("descripcion").value.trim();
   const categoria = document.getElementById("categoria").value.trim();
@@ -28,39 +30,44 @@ export function guardarProductoDesdeFormulario() {
   const imagenInput = document.getElementById("imagen");
 
   // Validación
-  if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia) || !imagenInput.value) {
+  if (!nombre || !descripcion || !categoria || isNaN(precio) || isNaN(existencia) || !imagenInput.files.length) {
     alert("Por favor completa todos los campos.");
     return;
   }
 
-  // Obtener nombre de archivo de imagen local
-  const nombreImagen = imagenInput.value.split("\\").pop(); // para Windows
-  const urlImagen = 'imagenes/' + nombreImagen; // carpeta local donde están las imágenes
+  try {
+    const archivo = imagenInput.files[0];
+    const ruta = `productos/${Date.now()}_${archivo.name}`;
+    const imagenRef = storageRef(storage, ruta);
 
-  const producto = {
-    nombre,
-    descripcion,
-    categoria,
-    precio,
-    existencia,
-    imagen: urlImagen
-  };
+    // Subir imagen
+    await uploadBytes(imagenRef, archivo);
+    const imagenURL = await getDownloadURL(imagenRef);
 
-  // Guardar en Firebase
-  const productosRef = ref(database, 'productos');
-  const nuevoProductoRef = push(productosRef);
+    // Crear objeto producto
+    const producto = {
+      nombre,
+      descripcion,
+      categoria,
+      precio,
+      existencia,
+      imagen: imagenURL
+    };
 
-  set(nuevoProductoRef, producto)
-    .then(() => {
-      alert("Producto guardado con éxito.");
-      document.getElementById("formularioProducto").reset();
-      document.getElementById("formularioProducto").style.display = "none";
-    })
-    .catch((error) => {
-      console.error("Error al guardar el producto:", error);
-      alert("Hubo un error al guardar el producto.");
-    });
+    // Guardar en la base de datos
+    const productosRef = ref(database, 'productos');
+    const nuevoProductoRef = push(productosRef);
+    await set(nuevoProductoRef, producto);
+
+    alert("Producto guardado con éxito.");
+    document.getElementById("formularioProducto").reset();
+    document.getElementById("formularioProducto").style.display = "none";
+
+  } catch (error) {
+    console.error("Error al guardar el producto:", error);
+    alert("Hubo un error al subir la imagen o guardar el producto.");
+  }
 }
 
-// Exportar para uso en otros archivos
-export { database, ref, push, set };
+// Exportar objetos útiles
+export { database, storage, ref, push, set, storageRef, uploadBytes, getDownloadURL };
