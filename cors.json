@@ -1,8 +1,8 @@
 [
   {
-    "origin": ["https://dreamsbeauty.vercel.app"],
-    "method": ["GET", "POST", "PUT"],
+    "origin": ["*"],
+    "method": ["GET", "POST", "PUT", "DELETE"],
     "maxAgeSeconds": 3600,
-    "responseHeader": ["Content-Type", "Authorization"]
+    "responseHeader": ["Content-Type"]
   }
 ]
