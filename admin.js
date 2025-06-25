@@ -1,7 +1,10 @@
-import { database } from './firebase-config.js';
+import { app, storage, database } from './firebase-config.js';
 import {
   ref as dbRef, push, set, update, remove, onValue
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import {
+  ref as storageRef, uploadBytes, getDownloadURL
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 function mostrarFormulario(producto = null) {
   const existing = document.getElementById('adminForm');
@@ -56,19 +59,13 @@ function mostrarFormulario(producto = null) {
     const file = imagenInput.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('imagen', file);
+    const nombreArchivo = `${Date.now()}_${file.name}`;
+    const imgRef = storageRef(storage, 'imagenes/' + nombreArchivo);
 
     try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!res.ok) throw new Error('Error en la subida de imagen');
-
-      const data = await res.json();
-      imagenURL.value = data.url;
+      const snapshot = await uploadBytes(imgRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      imagenURL.value = url;
     } catch (error) {
       console.error('Error al subir imagen:', error);
       alert('Hubo un problema al subir la imagen.');

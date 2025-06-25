@@ -126,25 +126,25 @@
 
   <!-- Script principal -->
   <script type="module">
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-    // Tu configuración Firebase (reemplaza con la tuya)
     const firebaseConfig = {
-      apiKey: "AIzaSyDu-_vpONpb42CSkPzjWwLZLlWkG0LLyXM",
-      authDomain: "tiendabelleza-56ce2.firebaseapp.com",
-      databaseURL: "https://tiendabelleza-56ce2-default-rtdb.firebaseio.com",
-      projectId: "tiendabelleza-56ce2",
-      storageBucket: "tiendabelleza-56ce2.appspot.com",
-      messagingSenderId: "78777047836",
-      appId: "1:78777047836:web:d08fea0926fe55c10a38d9"
+      apiKey: "AIzaSyDBJ9qe5eZqptNy1UTb4Oi1mcJUxBxKf-s",
+      authDomain: "dreamshop-45a70.firebaseapp.com",
+      databaseURL: "https://dreamshop-45a70-default-rtdb.firebaseio.com",
+      projectId: "dreamshop-45a70",
+      storageBucket: "dreamshop-45a70.appspot.com",
+      messagingSenderId: "183753341240",
+      appId: "1:183753341240:web:5870409b9f704d1e42a9cd",
+      measurementId: "G-XBYP89FPFL"
     };
 
-    // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
+    const storage = getStorage(app);
 
-    // Evento para mostrar/ocultar formulario
     const menuBtn = document.getElementById('menuBtn');
     const adminMenu = document.getElementById('adminMenu');
     menuBtn.addEventListener('click', () => {
@@ -156,7 +156,6 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
     };
 
-    // Evento para guardar producto
     document.getElementById("guardarBtn").addEventListener("click", async () => {
       const nombre = document.getElementById("nombre").value.trim();
       const descripcion = document.getElementById("descripcion").value.trim();
@@ -170,34 +169,17 @@
         return;
       }
 
-      // Preparar FormData para subir la imagen
-      const formData = new FormData();
-      formData.append('imagen', imagenInput.files[0]);
+      const imagenArchivo = imagenInput.files[0];
+      const ruta = `productos/${Date.now()}_${imagenArchivo.name}`;
+      const imagenRef = storageRef(storage, ruta);
 
       try {
-        // Enviar imagen al endpoint API de Vercel Blob (tu /api/upload)
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
+        // Subir imagen a Firebase Storage
+        await uploadBytes(imagenRef, imagenArchivo);
+        const imagenURL = await getDownloadURL(imagenRef);
 
-        if (!response.ok) throw new Error("Error al subir la imagen");
-
-        const data = await response.json();
-
-        if (!data.url) throw new Error("No se recibió URL de la imagen");
-
-        // Construir objeto producto con URL real de la imagen
-        const producto = {
-          nombre,
-          descripcion,
-          categoria,
-          precio,
-          existencia,
-          imagen: data.url // URL que devuelve el endpoint
-        };
-
-        // Guardar producto en Firebase
+        // Guardar producto en Realtime Database
+        const producto = { nombre, descripcion, categoria, precio, existencia, imagen: imagenURL };
         const productosRef = ref(database, 'productos');
         const nuevoProductoRef = push(productosRef);
         await set(nuevoProductoRef, producto);
@@ -206,7 +188,7 @@
         document.getElementById("formularioProducto").reset();
         document.getElementById("formularioProducto").style.display = "none";
       } catch (error) {
-        console.error("Error al subir imagen o guardar producto:", error);
+        console.error("Error al guardar el producto:", error);
         alert("Ocurrió un error al subir la imagen o guardar el producto.");
       }
     });

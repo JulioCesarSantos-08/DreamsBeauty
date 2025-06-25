@@ -1,9 +1,0 @@
-{
-  "name": "dreamsbeauty",
-  "version": "1.0.0",
-  "main": "index.js",
-  "dependencies": {
-    "@vercel/blob": "^1.0.2",
-    "formidable": "^2.0.1"
-  }
-}
